@@ -13,23 +13,22 @@
 
 namespace BEdita\Core\Test\Fixture;
 
-use BEdita\Core\TestSuite\Fixture\TestFixture;
+use Cake\TestSuite\Fixture\TestFixture;
 
-class FakeFelinesFixture extends TestFixture
+/**
+ * Fixture for `fake_tags` table.
+ */
+class FakeTagsFixture extends TestFixture
 {
 
+    /**
+     * {@inheritDoc}
+     */
     public $fields = [
-        'id' => ['type' => 'integer', 'length' => 10, 'unsigned' => true, 'null' => false, 'default' => null, 'comment' => '', 'precision' => null, 'autoIncrement' => null],
-        'family' => ['type' => 'string', 'length' => 255, 'null' => true, 'default' => null, 'precision' => null],
+        'id' => ['type' => 'integer', 'length' => 10, 'unsigned' => true, 'null' => false, 'default' => null, 'comment' => '', 'precision' => null, 'autoIncrement' => true],
+        'name' => ['type' => 'string', 'length' => 255, 'null' => false, 'default' => null, 'precision' => null],
         '_constraints' => [
             'primary' => ['type' => 'primary', 'columns' => ['id'], 'length' => []],
-            'fakefelines_fk' => [
-                'type' => 'foreign',
-                'columns' => ['id'],
-                'references' => ['fake_mammals', 'id'],
-                'update' => 'noAction',
-                'delete' => 'noAction'
-            ]
         ],
         '_options' => [
             'engine' => 'InnoDB',
@@ -41,6 +40,7 @@ class FakeFelinesFixture extends TestFixture
      * {@inheritDoc}
      */
     public $records = [
-        ['family' => 'purring cats'],
+        ['name' => 'Science'],
+        ['name' => 'Tale'],
     ];
 }
