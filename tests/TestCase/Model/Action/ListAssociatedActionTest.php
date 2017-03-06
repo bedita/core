@@ -13,16 +13,18 @@
 
 namespace BEdita\Core\Test\TestCase\Model\Action;
 
-use BEdita\Core\Model\Action\AddAssociatedAction;
+use BEdita\Core\Model\Action\ListAssociatedAction;
+use Cake\Datasource\EntityInterface;
+use Cake\Datasource\Exception\InvalidPrimaryKeyException;
+use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\ORM\Query;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
-use Cake\Utility\Inflector;
 
 /**
- * @covers \BEdita\Core\Model\Action\AddAssociatedAction<extended>
+ * @covers \BEdita\Core\Model\Action\ListAssociatedAction
  */
-class AddAssociatedTest extends TestCase
+class ListAssociatedActionTest extends TestCase
 {
 
     /**
@@ -68,42 +70,48 @@ class AddAssociatedTest extends TestCase
     public function invocationProvider()
     {
         return [
-            'nothingToDo' => [
-                0,
-                'FakeTags',
-                'FakeArticles',
-                1,
-                null,
-            ],
-            'alreadyPresent' => [
-                0,
-                'FakeTags',
-                'FakeArticles',
-                1,
-                1,
-            ],
             'belongsToMany' => [
-                1,
+                [
+                    ['id' => 1],
+                ],
                 'FakeTags',
                 'FakeArticles',
                 1,
-                2,
+            ],
+            'belongsToManyMissing' => [
+                new RecordNotFoundException('Record not found in table "fake_tags"'),
+                'FakeTags',
+                'FakeArticles',
+                99,
+            ],
+            'invalidPrimaryKey' => [
+                new InvalidPrimaryKeyException('Record not found in table "fake_tags" with primary key [\'invalid\', \'pk\']'),
+                'FakeTags',
+                'FakeArticles',
+                ['invalid', 'pk'],
             ],
             'hasMany' => [
-                2,
+                [
+                    ['id' => 1],
+                    ['id' => 2],
+                ],
+                'FakeAnimals',
+                'FakeArticles',
+                1,
+            ],
+            'hasManyNoResults' => [
+                [],
                 'FakeAnimals',
                 'FakeArticles',
                 2,
-                [1, 2],
             ],
             'belongsTo' => [
-                new \RuntimeException(
-                    'Unable to add additional links with association of type "Cake\ORM\Association\BelongsTo"'
-                ),
+                [
+                    'id' => 1,
+                ],
                 'FakeArticles',
                 'FakeAnimals',
                 1,
-                [1, 2],
             ],
         ];
     }
@@ -111,16 +119,15 @@ class AddAssociatedTest extends TestCase
     /**
      * Test invocation of command.
      *
-     * @param bool|\Exception Expected result.
+     * @param array|\Exception $expected Expected result.
      * @param string $table Table to use.
      * @param string $association Association to use.
-     * @param int $entity Entity to update relations for.
-     * @param int|int[]|null $related Related entity(-ies).
+     * @param int $id Entity ID to list relations for.
      * @return void
      *
      * @dataProvider invocationProvider()
      */
-    public function testInvocation($expected, $table, $association, $entity, $related)
+    public function testInvocation($expected, $table, $association, $id)
     {
         if ($expected instanceof \Exception) {
             $this->expectException(get_class($expected));
@@ -128,40 +135,16 @@ class AddAssociatedTest extends TestCase
         }
 
         $association = TableRegistry::get($table)->association($association);
-        $action = new AddAssociatedAction(compact('association'));
+        $action = new ListAssociatedAction(compact('association'));
 
-        $entity = $association->getSource()->get($entity, ['contain' => [$association->getName()]]);
-        $relatedEntities = null;
-        if (is_int($related)) {
-            $relatedEntities = $association->getTarget()->get($related);
-        } elseif (is_array($related)) {
-            $relatedEntities = $association->getTarget()->find()
-                ->where([
-                    $association->getTarget()->getPrimaryKey() . ' IN' => $related,
-                ])
-                ->toArray();
-        }
+        $result = $action(['primaryKey' => $id]);
 
-        $result = $action(compact('entity', 'relatedEntities'));
-
-        $count = 0;
-        if ($related !== null) {
-            $count = $association->getTarget()->find()
-                ->where([
-                    $association->getTarget()->aliasField($association->getTarget()->getPrimaryKey()) . ' IN' => $related,
-                ])
-                ->matching(
-                    Inflector::camelize($association->getSource()->getTable()),
-                    function (Query $query) use ($association, $entity) {
-                        return $query->where([
-                            $association->getSource()->aliasField($association->getSource()->getPrimaryKey()) => $entity->id,
-                        ]);
-                    }
-                )
-                ->count();
+        if ($result instanceof Query) {
+            $result = $result->enableHydration(false)->toArray();
+        } elseif ($result instanceof EntityInterface) {
+            $result = $result->toArray();
         }
 
         $this->assertEquals($expected, $result);
-        $this->assertEquals(count($related), $count);
     }
 }
