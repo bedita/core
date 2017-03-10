@@ -24,7 +24,7 @@ use Cake\ORM\Association\HasOne;
  *
  * @since 4.0.0
  */
-class SetAssociated extends UpdateAssociated
+class SetAssociatedAction extends UpdateAssociatedAction
 {
 
     /**
@@ -69,7 +69,7 @@ class SetAssociated extends UpdateAssociated
      * @return int|false Number of updated relationships, or `false` on failure.
      * @throws \RuntimeException Throws an exception if an unsupported association is passed.
      */
-    public function __invoke(EntityInterface $entity, $relatedEntities)
+    protected function update(EntityInterface $entity, $relatedEntities)
     {
         if ($this->Association instanceof BelongsToMany || $this->Association instanceof HasMany) {
             if ($relatedEntities === null) {
@@ -82,7 +82,7 @@ class SetAssociated extends UpdateAssociated
         }
 
         if ($relatedEntities !== null && !($relatedEntities instanceof EntityInterface)) {
-            throw new \InvalidArgumentException(__('Unable to link multiple entities'));
+            throw new \InvalidArgumentException(__d('bedita', 'Unable to link multiple entities'));
         }
 
         if ($this->Association instanceof BelongsTo) {
@@ -97,7 +97,7 @@ class SetAssociated extends UpdateAssociated
             });
         }
 
-        throw new \RuntimeException(__('Unknown association of type "{0}"', get_class($this->Association)));
+        throw new \RuntimeException(__d('bedita', 'Unknown association of type "{0}"', get_class($this->Association)));
     }
 
     /**
@@ -157,11 +157,15 @@ class SetAssociated extends UpdateAssociated
      */
     protected function hasOne(EntityInterface $entity, EntityInterface $relatedEntity = null)
     {
+        $foreignKey = (array)$this->Association->getForeignKey();
+        $bindingKeyValue = $entity->extract((array)$this->Association->getBindingKey());
         $existing = $this->existing($entity);
 
         if ($existing === null && $relatedEntity === null) {
             return 0;
-        } elseif ($relatedEntity !== null) {
+        }
+
+        if ($relatedEntity !== null) {
             $primaryKey = $relatedEntity->extract((array)$this->Association->getPrimaryKey());
 
             if ($primaryKey == $existing) {
@@ -169,9 +173,24 @@ class SetAssociated extends UpdateAssociated
             }
         }
 
+        $this->Association->getTarget()->updateAll(
+            array_combine(
+                $foreignKey,
+                array_fill(0, count($foreignKey), null)
+            ),
+            array_combine(
+                $foreignKey,
+                $bindingKeyValue
+            )
+        );
+
+        if ($relatedEntity === null) {
+            return 0;
+        }
+
         $relatedEntity->set(array_combine(
-            (array)$this->Association->getForeignKey(),
-            $entity->extract((array)$this->Association->getBindingKey())
+            $foreignKey,
+            $bindingKeyValue
         ));
 
         return $this->Association->getTarget()->save($relatedEntity) ? 1 : false;
