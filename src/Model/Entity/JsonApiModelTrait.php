@@ -29,6 +29,6 @@ trait JsonApiModelTrait
      */
     protected function routeNamePrefix()
     {
-        return 'api:model';
+        return 'api:model:resources';
     }
 }
