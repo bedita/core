@@ -13,10 +13,12 @@
 
 namespace BEdita\Core\Model\Behavior;
 
+use BEdita\Core\Exception\BadFilterException;
 use BEdita\Core\Model\Entity\ObjectEntity;
 use Cake\Collection\CollectionInterface;
+use Cake\Database\Expression\FunctionExpression;
+use Cake\Database\Expression\QueryExpression;
 use Cake\Datasource\EntityInterface;
-use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Event\Event;
 use Cake\ORM\Behavior;
 use Cake\ORM\Query;
@@ -35,6 +37,9 @@ class CustomPropertiesBehavior extends Behavior
      */
     protected $_defaultConfig = [
         'field' => 'custom_props',
+        'implementedFinders' => [
+            'customProp' => 'findCustomProp',
+        ],
     ];
 
     /**
@@ -215,5 +220,41 @@ class CustomPropertiesBehavior extends Behavior
         }
 
         return array_key_exists($field, (array)$entity);
+    }
+
+    /**
+     * Finder for custom property.
+     *
+     * @param \Cake\ORM\Query $query Query object instance.
+     * @param array $options Options.
+     * @return \Cake\ORM\Query
+     */
+    public function findCustomProp(Query $query, array $options): Query
+    {
+        if (empty($options)) {
+            // Bad filter options.
+            throw new BadFilterException([
+                'title' => __d('bedita', 'Invalid data'),
+            ]);
+        }
+
+        return $query->where(function (QueryExpression $exp) use ($options) {
+            $field = $this->getTable()->aliasField($this->getConfig('field'));
+            // $field = $this->getConfig('field');
+
+            return $exp->and_(array_map(
+                function ($key, $value) use ($field, $exp) {
+                    return $exp->eq(
+                        new FunctionExpression(
+                            'JSON_EXTRACT',
+                            [$field => 'literal', sprintf('$.%s', $key)],
+                        ),
+                        $value
+                    );
+                },
+                array_keys($options),
+                $options
+            ));
+        });
     }
 }
