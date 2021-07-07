@@ -131,6 +131,16 @@ class ListEntitiesAction extends BaseAction
                 continue;
             }
 
+            if ($this->Table->behaviors()->has('CustomProperties')) {
+                /** @var \BEdita\Core\Model\Behavior\CustomPropertiesBehavior */
+                $behavior = $this->Table->behaviors()->get('CustomProperties');
+                if (in_array($key, array_keys($behavior->getAvailable()))) {
+                    $query = $query->find('customProp', [$key => $value]);
+
+                    continue;
+                };
+            }
+
             // No suitable filter was found
             //$this->log('Filter not found ' . $key, 'error');
             throw new BadFilterException([
