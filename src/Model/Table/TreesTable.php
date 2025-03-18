@@ -252,9 +252,7 @@ class TreesTable extends Table
     {
         if (empty($entity->get('slug'))) {
             $object = TableRegistry::getTableLocator()->get('Objects')->get($entity->get('object_id'));
-            $slug = mb_strtolower(Text::slug((string)$object->get('title') ?: $object->get('type')));
-            $slug = Text::truncate($slug, 254 - strlen((string)$entity->get('object_id')));
-            $entity->set('slug', sprintf('%s-%s', $slug, $entity->get('object_id')));
+            $entity->set('slug', $object->get('uname'));
         } elseif (!empty($entity->get('slug')) && $entity->isDirty('slug')) {
             $slug = mb_strtolower(Text::slug((string)$entity->get('slug')));
             $slug = Text::truncate($slug, 255);

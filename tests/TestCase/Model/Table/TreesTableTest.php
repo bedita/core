@@ -221,52 +221,19 @@ class TreesTableTest extends TestCase
     {
         return [
             'no slug' => [
-                'title-example-3',
+                'title-two',
                 3,
-                '',
-                'title example',
-            ],
-            'no slug or title' => [
-                'documents-3',
-                3,
-                '',
-                '',
-            ],
-            'no slug, title special characters' => [
-                'asd-lol-rofl-3',
-                3,
-                '',
-                'asd@lol.rofl',
+                null,
             ],
             'slug correct' => [
                 'slug-doc',
-                2,
+                3,
                 'slug-doc',
-                'title example',
             ],
-            'update no slug' => [
-                'title-example-2',
-                2,
-                '',
-                'title example',
-            ],
-            'update no slug or title' => [
-                'documents-2',
-                2,
-                '',
-                '',
-            ],
-            'update slug special characters' => [
-                'asd-lol-rofl',
-                2,
-                'asd@lol.rofl',
-                'title example',
-            ],
-            'update slug correct' => [
-                'slug-doc',
-                2,
-                'slug-doc',
-                'title example',
+            'slug special characters' => [
+                'slug-special-chars',
+                3,
+                'slug @ special # chars',
             ],
         ];
     }
@@ -277,22 +244,17 @@ class TreesTableTest extends TestCase
      * @param $expected
      * @param $objectId
      * @param $slug
-     * @param $title
      * @return void
      * @dataProvider slugPopulationProvider
      * @covers ::beforeRules()
      */
-    public function testSlugPopulation($expected, $objectId, $slug, $title)
+    public function testSlugPopulation($expected, $objectId, $slug)
     {
-        $this->fetchTable('Documents')
-            ->updateQuery()
-            ->set('title', $title)
-            ->where(['id' => $objectId])
-            ->execute();
-        $node = $this->Trees->newEntity([
-            'object_id' => $objectId,
-            'slug' => $slug,
-        ]);
+        $node = $this->Trees->newEntity(['object_id' => $objectId]);
+        if ($slug !== null) {
+            $node->set('slug', $slug);
+        }
+
         $this->Trees->beforeRules(new Event('Model.beforeRules'), $node);
         static::assertEquals($expected, $node->get('slug'));
     }
